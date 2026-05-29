@@ -1,0 +1,78 @@
+# AI Daily Report Configuration
+# Copy this file to config.yaml and fill in your values
+
+sources:
+  hackernews:
+    enabled: true
+    # Keywords to filter AI-related stories
+    keywords:
+      - AI
+      - ML
+      - GPT
+      - LLM
+      - "machine learning"
+      - "deep learning"
+      - "neural network"
+      - "artificial intelligence"
+    max_posts: 20
+
+  reddit:
+    enabled: true
+    subreddits:
+      - MachineLearning
+      - artificial
+      - ArtificialIntelligence
+      - deeplearning
+    # Get these from https://www.reddit.com/prefs/apps
+    client_id: YOUR_REDDIT_CLIENT_ID
+    client_secret: YOUR_REDDIT_CLIENT_SECRET
+    user_agent: "AI Daily Report Bot 1.0"
+    max_posts: 15
+
+  github:
+    enabled: true
+    # Languages to filter
+    languages:
+      - Python
+      - "Jupyter Notebook"
+    # Keywords in repository names/descriptions
+    keywords:
+      - AI
+      - machine-learning
+      - deep-learning
+      - neural-network
+      - NLP
+      - GPT
+    max_repos: 15
+
+  twitter:
+    enabled: false
+    # RapidAPI key for Twitter data
+    rapidapi_key: YOUR_RAPIDAPI_KEY
+    max_tweets: 20
+
+github:
+  # Your GitHub repository URL (SSH)
+  repo_url: git@github.com:YOUR_USERNAME/ai-daily-reports.git
+  branch: main
+  commit_message: "Add AI daily report for {date}"
+
+report:
+  output_dir: reports
+  date_format: "%Y-%m-%d"
+  include_summary: true
+
+logging:
+  level: INFO
+  file: logs/daily_report.log
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+notification:
+  enabled: false
+  # Optional: email or webhook for failure alerts
+  email:
+    smtp_server: smtp.gmail.com
+    smtp_port: 587
+    sender: your_email@gmail.com
+    password: YOUR_EMAIL_PASSWORD
+    receiver: your_email@gmail.com

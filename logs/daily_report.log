@@ -1,0 +1,20 @@
+2026-05-29 13:47:42,569 - AIReportGenerator - INFO - ==================================================
+2026-05-29 13:47:42,569 - AIReportGenerator - INFO - AI Daily Report Generator - Starting
+2026-05-29 13:47:42,569 - AIReportGenerator - INFO - ==================================================
+2026-05-29 13:47:42,569 - AIReportGenerator - INFO - Fetching data from 3 sources
+2026-05-29 13:47:42,570 - HackerNewsSource - INFO - Fetching top stories from Hacker News
+2026-05-29 13:47:42,570 - GitHubSource - INFO - Fetching trending repositories from GitHub
+2026-05-29 13:47:42,586 - RedditSource - WARNING - Reddit client not initialized. Please configure client_id and client_secret in config.yaml
+2026-05-29 13:47:42,587 - AIReportGenerator - INFO - Fetched 0 items from Reddit
+2026-05-29 13:47:44,250 - GitHubSource - INFO - Found 4 trending AI repositories
+2026-05-29 13:47:44,251 - AIReportGenerator - INFO - Fetched 4 items from GitHub Trending
+2026-05-29 13:47:56,869 - HackerNewsSource - INFO - Found 19 AI-related stories
+2026-05-29 13:47:56,869 - AIReportGenerator - INFO - Fetched 19 items from Hacker News
+2026-05-29 13:47:56,870 - AIReportGenerator - INFO - Total items collected: 23
+2026-05-29 13:47:56,870 - MarkdownGenerator - INFO - Generating report for 2026-05-29
+2026-05-29 13:47:56,871 - MarkdownGenerator - INFO - Report saved to reports/2026-05-29.md
+2026-05-29 13:47:56,871 - AIReportGenerator - INFO - Report generated: reports/2026-05-29.md
+2026-05-29 13:47:56,871 - AIReportGenerator - INFO - Dry run - skipping Git commit
+2026-05-29 13:47:56,871 - AIReportGenerator - INFO - ==================================================
+2026-05-29 13:47:56,871 - AIReportGenerator - INFO - AI Daily Report Generator - Completed
+2026-05-29 13:47:56,871 - AIReportGenerator - INFO - ==================================================
