@@ -40,8 +40,9 @@ class GitHandler:
             result = subprocess.run(
                 ['git', 'status'],
                 cwd=self.work_dir,
-                capture_output=True,
-                text=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True
             )
 
             if result.returncode == 0:
@@ -136,8 +137,9 @@ class GitHandler:
             result = subprocess.run(
                 ['git', 'remote', '-v'],
                 cwd=self.work_dir,
-                capture_output=True,
-                text=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True
             )
 
             if 'origin' not in result.stdout:

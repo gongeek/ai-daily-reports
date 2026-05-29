@@ -47,13 +47,19 @@ sources:
 
   twitter:
     enabled: false
-    # RapidAPI key for Twitter data
-    rapidapi_key: YOUR_RAPIDAPI_KEY
+    # Nitter instances are frequently blocked by Twitter
+    # Alternative: Use other free sources (HackerNews, GitHub, Reddit)
+    # Or consider paid Twitter API ($100/month for Basic tier)
+    accounts:
+      - OpenAI
+      - AnthropicAI
+      - GoogleAI
+      - DeepMindAI
     max_tweets: 20
 
 github:
   # Your GitHub repository URL (SSH)
-  repo_url: git@github.com:YOUR_USERNAME/ai-daily-reports.git
+  repo_url: git@github.com:gongeek/ai-daily-reports.git
   branch: main
   commit_message: "Add AI daily report for {date}"
 

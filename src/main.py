@@ -1,5 +1,5 @@
 """
-Main program entry point
+Main program entry point with bilingual support
 """
 import sys
 import os
@@ -16,8 +16,10 @@ from sources.hackernews import HackerNewsSource
 from sources.github import GitHubSource
 from sources.reddit import RedditSource
 from sources.twitter import TwitterSource
+from sources.nitter import NitterSource
 from generator import MarkdownGenerator
 from git_handler import GitHandler
+from translator import mock_translate_for_testing  # Using mock for now
 
 
 def setup_logging(config: dict) -> logging.Logger:
@@ -110,11 +112,12 @@ def initialize_sources(config: dict) -> dict:
             sources_config['reddit']
         )
 
-    # Twitter (optional)
+    # Twitter (optional - via Nitter)
     if sources_config.get('twitter', {}).get('enabled', False):
-        sources['Twitter'] = TwitterSource(
-            sources_config['twitter']
-        )
+        # Use Nitter instead of paid API
+        twitter_config = sources_config['twitter']
+        twitter_config['enabled'] = True  # Force enable for Nitter
+        sources['Twitter'] = NitterSource(twitter_config)
 
     return sources
 
@@ -156,7 +159,7 @@ def fetch_all_data(sources: dict, logger: logging.Logger) -> dict:
 
 def main(config_path: str = 'config.yaml', dry_run: bool = False) -> bool:
     """
-    Main execution function
+    Main execution function with bilingual support
 
     Args:
         config_path: Path to configuration file
@@ -173,6 +176,7 @@ def main(config_path: str = 'config.yaml', dry_run: bool = False) -> bool:
         logger = setup_logging(config)
 
         logger.info("=" * 50)
+        logger.info("AI日报生成器 - 启动")
         logger.info("AI Daily Report Generator - Starting")
         logger.info("=" * 50)
 
@@ -193,12 +197,22 @@ def main(config_path: str = 'config.yaml', dry_run: bool = False) -> bool:
             return False
 
         logger.info(f"Total items collected: {total_items}")
+        logger.info(f"总计收集: {total_items} 条内容")
 
-        # Generate report
-        generator = MarkdownGenerator(config.get('report', {}))
-        report_path = generator.generate(all_data)
+        # Translate to Chinese
+        logger.info("开始翻译标题和描述到中文...")
+        translations = mock_translate_for_testing(all_data)
+        logger.info(f"Translated {len(translations)} text items")
+
+        # Generate report with translations
+        report_config = config.get('report', {})
+        report_config['translate_to_chinese'] = config.get('translate_to_chinese', True)
+
+        generator = MarkdownGenerator(report_config)
+        report_path = generator.generate(all_data, translated_titles=translations)
 
         logger.info(f"Report generated: {report_path}")
+        logger.info(f"报告已生成: {report_path}")
 
         # Git commit and push
         if not dry_run:
@@ -207,12 +221,16 @@ def main(config_path: str = 'config.yaml', dry_run: bool = False) -> bool:
 
             if success:
                 logger.info("Report successfully committed and pushed to GitHub")
+                logger.info("报告已成功提交到GitHub")
             else:
                 logger.warning("Git commit failed, but report was generated locally")
+                logger.warning("Git提交失败，但报告已在本地生成")
         else:
             logger.info("Dry run - skipping Git commit")
+            logger.info("测试运行 - 跳过Git提交")
 
         logger.info("=" * 50)
+        logger.info("AI日报生成器 - 完成")
         logger.info("AI Daily Report Generator - Completed")
         logger.info("=" * 50)
 

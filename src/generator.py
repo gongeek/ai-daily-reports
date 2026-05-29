@@ -1,5 +1,5 @@
 """
-Markdown report generator
+Markdown report generator with Chinese translation support
 """
 import logging
 import os
@@ -10,7 +10,7 @@ from collections import Counter
 
 class MarkdownGenerator:
     """
-    Generate daily AI trends report in Markdown format
+    Generate daily AI trends report in Markdown format with bilingual support
     """
 
     def __init__(self, config: Dict[str, Any]):
@@ -24,19 +24,21 @@ class MarkdownGenerator:
         self.output_dir = config.get('output_dir', 'reports')
         self.date_format = config.get('date_format', '%Y-%m-%d')
         self.logger = logging.getLogger('MarkdownGenerator')
+        self.translate_to_chinese = config.get('translate_to_chinese', True)
 
         # Ensure output directory exists
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
             self.logger.info(f"Created output directory: {self.output_dir}")
 
-    def generate(self, data: Dict[str, List[Dict]], date: datetime = None) -> str:
+    def generate(self, data: Dict[str, List[Dict]], date: datetime = None, translated_titles: Dict[str, str] = None) -> str:
         """
-        Generate daily report from collected data
+        Generate daily report from collected data with bilingual support
 
         Args:
             data: Dictionary with source names as keys and item lists as values
             date: Report date (defaults to today)
+            translated_titles: Dictionary mapping original titles to Chinese translations
 
         Returns:
             Path to generated report file
@@ -50,8 +52,8 @@ class MarkdownGenerator:
 
         self.logger.info(f"Generating report for {report_date}")
 
-        # Generate Markdown content
-        content = self._build_report_content(data, report_date)
+        # Generate Markdown content with bilingual support
+        content = self._build_report_content(data, report_date, translated_titles or {})
 
         # Write to file
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -60,49 +62,56 @@ class MarkdownGenerator:
         self.logger.info(f"Report saved to {filepath}")
         return filepath
 
-    def _build_report_content(self, data: Dict[str, List[Dict]], date_str: str) -> str:
+    def _build_report_content(self, data: Dict[str, List[Dict]], date_str: str, translated_titles: Dict[str, str] = None) -> str:
         """
-        Build Markdown report content
+        Build Markdown report content with bilingual support
 
         Args:
             data: Collected data from sources
             date_str: Date string for report
+            translated_titles: Dictionary of translated titles
 
         Returns:
             Markdown content string
         """
+        translated_titles = translated_titles or {}
         lines = []
 
-        # Header
-        lines.append(f"# AI Trends Daily Report - {date_str}")
+        # Header - bilingual
+        lines.append(f"# AI趋势日报 - {date_str}")
         lines.append("")
-        lines.append(f"*Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
+        lines.append(f"*生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
+        lines.append("")
+        lines.append("---")
         lines.append("")
 
-        # Overview section
-        lines.append("## 📊 Overview")
+        # Overview section - bilingual
+        lines.append("## 📊 数据概览")
         overview_stats = self._generate_overview(data)
         lines.extend(overview_stats)
         lines.append("")
 
         # Hacker News section
         if 'Hacker News' in data and data['Hacker News']:
-            lines.append("## 🔥 Hacker News Top AI Stories")
-            hn_items = self._format_hackernews_items(data['Hacker News'])
+            lines.append("## 🔥 Hacker News热门AI文章")
+            lines.append("")
+            hn_items = self._format_hackernews_items(data['Hacker News'], translated_titles)
             lines.extend(hn_items)
             lines.append("")
 
         # Reddit section
         if 'Reddit' in data and data['Reddit']:
-            lines.append("## 💬 Reddit Hot Posts")
-            reddit_items = self._format_reddit_items(data['Reddit'])
+            lines.append("## 💬 Reddit热门帖子")
+            lines.append("")
+            reddit_items = self._format_reddit_items(data['Reddit'], translated_titles)
             lines.extend(reddit_items)
             lines.append("")
 
         # GitHub Trending section
         if 'GitHub Trending' in data and data['GitHub Trending']:
-            lines.append("## 💻 GitHub Trending AI Projects")
-            github_items = self._format_github_items(data['GitHub Trending'])
+            lines.append("## 💻 GitHub热门AI项目")
+            lines.append("")
+            github_items = self._format_github_items(data['GitHub Trending'], translated_titles)
             lines.extend(github_items)
             lines.append("")
 
@@ -155,41 +164,49 @@ class MarkdownGenerator:
 
         return lines
 
-    def _format_hackernews_items(self, items: List[Dict]) -> List[str]:
+    def _format_hackernews_items(self, items: List[Dict], translated_titles: Dict[str, str] = None) -> List[str]:
         """
-        Format Hacker News items
+        Format Hacker News items with bilingual support
 
         Args:
             items: List of HN story dictionaries
+            translated_titles: Dictionary of translated titles
 
         Returns:
             List of formatted lines
         """
+        translated_titles = translated_titles or {}
         lines = []
 
         for i, item in enumerate(items, 1):
-            title = item.get('title', 'Untitled')
+            title_en = item.get('title', 'Untitled')
+            title_cn = translated_titles.get(title_en, title_en)
             link = item.get('link', '')
             score = item.get('score', 0)
             comments = item.get('comments', 0)
 
-            lines.append(f"{i}. [{title}]({link})")
-            lines.append(f"   - **Score:** {score} points")
-            lines.append(f"   - **Comments:** {comments}")
+            # Bilingual format
+            lines.append(f"{i}. **{title_cn}**")
+            if self.translate_to_chinese and title_cn != title_en:
+                lines.append(f"   - 英文标题: {title_en}")
+            lines.append(f"   - 链接: [{link}]({link})")
+            lines.append(f"   - 得分: {score} 点 | 评论: {comments} 条")
             lines.append("")
 
         return lines
 
-    def _format_reddit_items(self, items: List[Dict]) -> List[str]:
+    def _format_reddit_items(self, items: List[Dict], translated_titles: Dict[str, str] = None) -> List[str]:
         """
-        Format Reddit items grouped by subreddit
+        Format Reddit items grouped by subreddit with bilingual support
 
         Args:
             items: List of Reddit post dictionaries
+            translated_titles: Dictionary of translated titles
 
         Returns:
             List of formatted lines
         """
+        translated_titles = translated_titles or {}
         lines = []
 
         # Group by subreddit
@@ -205,42 +222,50 @@ class MarkdownGenerator:
             lines.append("")
 
             for i, post in enumerate(posts[:10], 1):  # Limit per subreddit
-                title = post.get('title', 'Untitled')[:100]
+                title_en = post.get('title', 'Untitled')[:100]
+                title_cn = translated_titles.get(post.get('title', ''), title_en)
                 link = post.get('link', '')
                 score = post.get('score', 0)
                 comments = post.get('comments', 0)
 
-                lines.append(f"{i}. [{title}]({link})")
-                lines.append(f"   - **Score:** {score} upvotes")
-                lines.append(f"   - **Comments:** {comments}")
+                lines.append(f"{i}. **{title_cn}**")
+                if self.translate_to_chinese and title_cn != title_en:
+                    lines.append(f"   - 英文标题: {title_en}")
+                lines.append(f"   - 链接: [{link}]({link})")
+                lines.append(f"   - 赞同: {score} | 评论: {comments} 条")
                 lines.append("")
 
         return lines
 
-    def _format_github_items(self, items: List[Dict]) -> List[str]:
+    def _format_github_items(self, items: List[Dict], translated_titles: Dict[str, str] = None) -> List[str]:
         """
-        Format GitHub Trending items
+        Format GitHub Trending items with bilingual support
 
         Args:
             items: List of GitHub repo dictionaries
+            translated_titles: Dictionary of translated descriptions
 
         Returns:
             List of formatted lines
         """
+        translated_titles = translated_titles or {}
         lines = []
 
         for i, item in enumerate(items, 1):
             full_name = item.get('full_name', 'unknown/unknown')
             link = item.get('link', '')
-            description = item.get('description', 'No description')[:150]
+            description_en = item.get('description', 'No description')[:150]
+            description_cn = translated_titles.get(description_en, description_en)
             language = item.get('language', 'Unknown')
             stars = item.get('stars', 0)
             stars_today = item.get('stars_today', 0)
 
-            lines.append(f"{i}. [{full_name}]({link})")
-            lines.append(f"   - **Description:** {description}")
-            lines.append(f"   - **Language:** {language}")
-            lines.append(f"   - **Stars:** {stars} total, ⭐ {stars_today} today")
+            lines.append(f"{i}. **[{full_name}]({link})**")
+            lines.append(f"   - 描述: {description_cn}")
+            if self.translate_to_chinese and description_cn != description_en:
+                lines.append(f"   - 英文描述: {description_en}")
+            lines.append(f"   - 语言: {language}")
+            lines.append(f"   - Stars: {stars} 总计 | ⭐ 今日 +{stars_today}")
             lines.append("")
 
         return lines
