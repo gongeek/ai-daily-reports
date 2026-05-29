@@ -1,5 +1,5 @@
 """
-Translation helper using Claude Code API
+Translation and summarization helpers using local model CLIs.
 """
 import subprocess
 import json
@@ -7,21 +7,89 @@ import logging
 import os
 import re
 import shutil
+import tempfile
 from typing import Dict, List
+
+
+def _get_codex_binary():
+    return os.environ.get('CODEX_BIN') or shutil.which('codex')
 
 
 def _get_claude_binary():
     return os.environ.get('CLAUDE_BIN') or shutil.which('claude')
 
 
-def _is_claude_enabled() -> bool:
-    return os.environ.get('CLAUDE_TRANSLATION_ENABLED', 'true').lower() not in ('0', 'false', 'no')
+def _is_model_enabled() -> bool:
+    return os.environ.get('MODEL_TRANSLATION_ENABLED', os.environ.get('CLAUDE_TRANSLATION_ENABLED', 'true')).lower() not in ('0', 'false', 'no')
+
+
+def _model_provider_order() -> List[str]:
+    provider = os.environ.get('REPORT_MODEL_PROVIDER', 'codex,claude')
+    return [name.strip().lower() for name in provider.split(',') if name.strip()]
+
+
+def _run_model_prompt(prompt: str, max_budget: str = None) -> str:
+    if not _is_model_enabled():
+        raise RuntimeError("Model translation disabled by MODEL_TRANSLATION_ENABLED")
+
+    errors = []
+    for provider in _model_provider_order():
+        try:
+            if provider == 'codex':
+                return _run_codex_prompt(prompt)
+            if provider == 'claude':
+                return _run_claude_prompt(prompt, max_budget=max_budget)
+            errors.append(f"unknown provider: {provider}")
+        except Exception as e:
+            errors.append(f"{provider}: {e}")
+
+    raise RuntimeError("; ".join(errors) or "No model provider configured")
+
+
+def _run_codex_prompt(prompt: str) -> str:
+    codex_bin = _get_codex_binary()
+    if not codex_bin:
+        raise RuntimeError("Codex CLI not found")
+
+    with tempfile.NamedTemporaryFile(mode='r+', encoding='utf-8', delete=True) as output_file:
+        command = [
+            codex_bin,
+            'exec',
+            '--sandbox',
+            'read-only',
+            '--skip-git-repo-check',
+            '--ephemeral',
+            '--output-last-message',
+            output_file.name
+        ]
+
+        model = os.environ.get('CODEX_TRANSLATION_MODEL')
+        if model:
+            command.extend(['--model', model])
+
+        command.append(prompt)
+
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=int(os.environ.get('CODEX_TRANSLATION_TIMEOUT', os.environ.get('CLAUDE_TRANSLATION_TIMEOUT', '180')))
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "Codex command failed")
+
+        output_file.seek(0)
+        output = output_file.read().strip()
+        if not output:
+            output = result.stdout.strip()
+
+    return output
 
 
 def _run_claude_prompt(prompt: str, max_budget: str = None) -> str:
     claude_bin = _get_claude_binary()
-    if not _is_claude_enabled():
-        raise RuntimeError("Claude disabled by CLAUDE_TRANSLATION_ENABLED")
     if not claude_bin:
         raise RuntimeError("Claude CLI not found")
 
@@ -43,8 +111,9 @@ def _run_claude_prompt(prompt: str, max_budget: str = None) -> str:
 
     result = subprocess.run(
         command,
-        capture_output=True,
-        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
         timeout=int(os.environ.get('CLAUDE_TRANSLATION_TIMEOUT', '120'))
     )
 
@@ -68,11 +137,11 @@ def translate_titles_with_claude(titles: List[str]) -> Dict[str, str]:
     logger.info(f"Translating {len(titles)} titles to Chinese")
 
     translations = {}
-    if not _is_claude_enabled():
-        logger.info("Claude translation disabled by CLAUDE_TRANSLATION_ENABLED")
+    if not _is_model_enabled():
+        logger.info("Model translation disabled by MODEL_TRANSLATION_ENABLED")
         return _identity_translations(titles)
-    if not _get_claude_binary():
-        logger.warning("Claude CLI not found; using original text")
+    if not _get_codex_binary() and not _get_claude_binary():
+        logger.warning("No model CLI found; using original text")
         return _identity_translations(titles)
 
     # Prepare translation prompt
@@ -84,7 +153,7 @@ Titles to translate:
 Only return the JSON array, no additional text."""
 
     try:
-        response_data = _parse_json_array(_run_claude_prompt(prompt))
+        response_data = _parse_json_array(_run_model_prompt(prompt))
         for item in response_data:
             translations[item['original']] = item['translated']
         logger.info(f"Successfully translated {len(translations)} titles")
@@ -98,7 +167,7 @@ Only return the JSON array, no additional text."""
     return translations
 
 
-def summarize_report_with_claude(data: Dict[str, List[Dict]], report_name: str) -> str:
+def summarize_report_with_model(data: Dict[str, List[Dict]], report_name: str) -> str:
     """
     Generate a concise Chinese summary before the report is written and committed.
     Falls back to a deterministic local summary if Claude is unavailable.
@@ -135,15 +204,22 @@ def summarize_report_with_claude(data: Dict[str, List[Dict]], report_name: str) 
 """
 
     try:
-        summary = _run_claude_prompt(
+        summary = _run_model_prompt(
             prompt,
             max_budget=os.environ.get('CLAUDE_SUMMARY_MAX_BUDGET_USD', '0.30')
         )
-        logger.info("Successfully generated Claude summary")
+        logger.info("Successfully generated model summary")
         return summary.strip()
     except Exception as e:
-        logger.warning(f"Claude summary failed; using local summary: {e}")
+        logger.warning(f"Model summary failed; using local summary: {e}")
         return _local_summary(data)
+
+
+def summarize_report_with_claude(data: Dict[str, List[Dict]], report_name: str) -> str:
+    """
+    Backward-compatible wrapper for the older Claude-specific function name.
+    """
+    return summarize_report_with_model(data, report_name)
 
 
 def _local_summary(data: Dict[str, List[Dict]]) -> str:

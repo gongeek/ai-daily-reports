@@ -22,7 +22,7 @@ from sources.arxiv import ArxivSource
 from sources.huggingface import HuggingFacePapersSource
 from generator import MarkdownGenerator
 from git_handler import GitHandler
-from translator import translate_batch_with_claude, summarize_report_with_claude
+from translator import translate_batch_with_claude, summarize_report_with_model
 
 
 def setup_logging(config: dict) -> logging.Logger:
@@ -269,7 +269,7 @@ def main(config_path: str = 'config.yaml', dry_run: bool = False) -> bool:
 
         # Summarize before writing and committing the report
         logger.info("开始生成中文总结...")
-        ai_summary = summarize_report_with_claude(all_data, 'AI趋势日报')
+        ai_summary = summarize_report_with_model(all_data, 'AI趋势日报')
         logger.info("中文总结已生成")
 
         # Generate report with translations

@@ -26,7 +26,7 @@ from sources.arxiv import ArxivSource
 from sources.huggingface import HuggingFacePapersSource
 from generator import MarkdownGenerator
 from git_handler import GitHandler
-from translator import translate_batch_with_claude, summarize_report_with_claude
+from translator import translate_batch_with_claude, summarize_report_with_model
 
 
 def deduplicate_ideas(data, logger):
@@ -268,7 +268,7 @@ def fetch_ai_ideas(dry_run=False):
 
     # Summarize before writing and committing the report
     logger.info("Generating Chinese AI ideas summary...")
-    ai_summary = summarize_report_with_claude(ideas_data, 'AI创意点子日报')
+    ai_summary = summarize_report_with_model(ideas_data, 'AI创意点子日报')
 
     # Generate report
     report_config = {
