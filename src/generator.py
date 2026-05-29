@@ -31,7 +31,7 @@ class MarkdownGenerator:
             os.makedirs(self.output_dir)
             self.logger.info(f"Created output directory: {self.output_dir}")
 
-    def generate(self, data: Dict[str, List[Dict]], date: datetime = None, translated_titles: Dict[str, str] = None) -> str:
+    def generate(self, data: Dict[str, List[Dict]], date: datetime = None, translated_titles: Dict[str, str] = None, ai_summary: str = None) -> str:
         """
         Generate daily report from collected data with bilingual support
 
@@ -53,7 +53,7 @@ class MarkdownGenerator:
         self.logger.info(f"Generating report for {report_date}")
 
         # Generate Markdown content with bilingual support
-        content = self._build_report_content(data, report_date, translated_titles or {})
+        content = self._build_report_content(data, report_date, translated_titles or {}, ai_summary=ai_summary)
 
         # Write to file
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -62,7 +62,7 @@ class MarkdownGenerator:
         self.logger.info(f"Report saved to {filepath}")
         return filepath
 
-    def _build_report_content(self, data: Dict[str, List[Dict]], date_str: str, translated_titles: Dict[str, str] = None) -> str:
+    def _build_report_content(self, data: Dict[str, List[Dict]], date_str: str, translated_titles: Dict[str, str] = None, ai_summary: str = None) -> str:
         """
         Build Markdown report content with bilingual support
 
@@ -90,6 +90,12 @@ class MarkdownGenerator:
         overview_stats = self._generate_overview(data)
         lines.extend(overview_stats)
         lines.append("")
+
+        if ai_summary:
+            lines.append("## 📌 今日中文总结")
+            lines.append("")
+            lines.append(ai_summary)
+            lines.append("")
 
         # Hacker News section
         if 'Hacker News' in data and data['Hacker News']:

@@ -33,7 +33,7 @@ class ArxivSource(BaseSource):
 
         self.logger.info("Fetching recent AI papers from arXiv")
         try:
-            response = self._retry_request(self._request_arxiv, max_retries=1, delay=2)
+            response = self._request_arxiv()
         except Exception as e:
             self.logger.warning(f"arXiv API unavailable this run; skipping arXiv papers: {e}")
             return []

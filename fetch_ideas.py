@@ -26,7 +26,7 @@ from sources.arxiv import ArxivSource
 from sources.huggingface import HuggingFacePapersSource
 from generator import MarkdownGenerator
 from git_handler import GitHandler
-from translator import translate_batch_with_claude
+from translator import translate_batch_with_claude, summarize_report_with_claude
 
 
 def deduplicate_ideas(data, logger):
@@ -266,6 +266,10 @@ def fetch_ai_ideas(dry_run=False):
     # Translate
     translations = translate_batch_with_claude(ideas_data)
 
+    # Summarize before writing and committing the report
+    logger.info("Generating Chinese AI ideas summary...")
+    ai_summary = summarize_report_with_claude(ideas_data, 'AI创意点子日报')
+
     # Generate report
     report_config = {
         'output_dir': 'ideas-reports',
@@ -284,7 +288,7 @@ def fetch_ai_ideas(dry_run=False):
     logger.info(f"Generating AI ideas report: {filepath}")
 
     # Build custom report content
-    content = build_ideas_report(ideas_data, date_str, translations)
+    content = build_ideas_report(ideas_data, date_str, translations, ai_summary)
 
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(content)
@@ -310,7 +314,7 @@ def fetch_ai_ideas(dry_run=False):
     return True
 
 
-def build_ideas_report(data, date_str, translations):
+def build_ideas_report(data, date_str, translations, ai_summary=None):
     """
     Build AI ideas report content
     """
@@ -333,6 +337,12 @@ def build_ideas_report(data, date_str, translations):
     for source, items in data.items():
         lines.append(f"- {source}: {len(items)}个创意")
     lines.append("")
+
+    if ai_summary:
+        lines.append("## 📌 今日中文总结")
+        lines.append("")
+        lines.append(ai_summary)
+        lines.append("")
 
     # Hacker News creative projects
     if 'Hacker News创意项目' in data and data['Hacker News创意项目']:
