@@ -122,6 +122,20 @@ class MarkdownGenerator:
             lines.extend(twitter_items)
             lines.append("")
 
+        rendered_sources = set([
+            'Hacker News',
+            'Reddit',
+            'GitHub Trending',
+            'Twitter'
+        ])
+        for source_name, items in data.items():
+            if source_name in rendered_sources or not items:
+                continue
+            lines.append(f"## {source_name}")
+            lines.append("")
+            lines.extend(self._format_generic_items(items, translated_titles))
+            lines.append("")
+
         # Summary section
         if self.config.get('include_summary', True):
             lines.append("## 📈 Summary & Key Trends")
@@ -292,6 +306,49 @@ class MarkdownGenerator:
             lines.append(f"{i}. [@{author}]({link})")
             lines.append(f"   - {text}...")
             lines.append(f"   - **Likes:** {likes}, **Retweets:** {retweets}")
+            lines.append("")
+
+        return lines
+
+    def _format_generic_items(self, items: List[Dict], translated_titles: Dict[str, str] = None) -> List[str]:
+        """
+        Format sources that do not have a custom renderer yet.
+
+        Args:
+            items: List of standardized item dictionaries
+            translated_titles: Dictionary of translated titles/descriptions
+
+        Returns:
+            List of formatted lines
+        """
+        translated_titles = translated_titles or {}
+        lines = []
+
+        for i, item in enumerate(items, 1):
+            title_en = item.get('title') or item.get('full_name') or item.get('name') or 'Untitled'
+            title_cn = translated_titles.get(title_en, title_en)
+            link = item.get('link', '')
+            description_en = item.get('description', '')
+            description_cn = translated_titles.get(description_en, description_en)
+            score = item.get('score', 0)
+            comments = item.get('comments', 0)
+            author = item.get('author', '')
+
+            if link:
+                lines.append(f"{i}. **[{title_cn}]({link})**")
+            else:
+                lines.append(f"{i}. **{title_cn}**")
+
+            if self.translate_to_chinese and title_cn != title_en:
+                lines.append(f"   - 英文标题: {title_en}")
+            if description_cn:
+                lines.append(f"   - 摘要: {description_cn[:240]}")
+            if self.translate_to_chinese and description_cn != description_en and description_en:
+                lines.append(f"   - 英文摘要: {description_en[:240]}")
+            if author:
+                lines.append(f"   - 作者/来源: {author}")
+            if score or comments:
+                lines.append(f"   - 热度: {score} | 评论: {comments}")
             lines.append("")
 
         return lines

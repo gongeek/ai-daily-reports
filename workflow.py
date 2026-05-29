@@ -7,7 +7,7 @@ import sys
 import os
 
 # Change to project directory
-project_dir = '/home/gongeekecs/workspace_happy/ai-daily-report'
+project_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(project_dir)
 
 # Add src to path

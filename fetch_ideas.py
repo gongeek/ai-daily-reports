@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.join(project_dir, 'src'))
 
 import yaml
 import logging
+import argparse
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -21,12 +22,48 @@ from sources.hackernews import HackerNewsSource
 from sources.github import GitHubSource
 from sources.producthunt import ProductHuntSource
 from sources.rss_feed import RSSSource
+from sources.arxiv import ArxivSource
+from sources.huggingface import HuggingFacePapersSource
 from generator import MarkdownGenerator
 from git_handler import GitHandler
-from translator import mock_translate_for_testing
+from translator import translate_batch_with_claude
 
 
-def fetch_ai_ideas():
+def deduplicate_ideas(data, logger):
+    """
+    Remove duplicate ideas across sections by link, falling back to title/name.
+    """
+    seen = set()
+    deduped = {}
+    duplicate_count = 0
+
+    for section, items in data.items():
+        unique_items = []
+        for item in items:
+            link = (item.get('link') or '').strip().lower()
+            title = (item.get('title') or item.get('full_name') or item.get('name') or '').strip().lower()
+            key = link or title
+
+            if not key:
+                unique_items.append(item)
+                continue
+
+            if key in seen:
+                duplicate_count += 1
+                continue
+
+            seen.add(key)
+            unique_items.append(item)
+
+        deduped[section] = unique_items
+
+    if duplicate_count:
+        logger.info(f"Removed {duplicate_count} duplicate ideas")
+
+    return deduped
+
+
+def fetch_ai_ideas(dry_run=False):
     """
     Fetch AI creative ideas and innovative projects
     """
@@ -84,11 +121,30 @@ def fetch_ai_ideas():
         'max_articles': 20
     }
 
+    arxiv_config = {
+        'enabled': True,
+        'categories': ['cs.AI', 'cs.CL', 'cs.LG', 'cs.CV', 'stat.ML'],
+        'keywords': [
+            'language model', 'LLM', 'agent', 'GPT', 'transformer',
+            'machine learning', 'deep learning', 'multimodal',
+            'retrieval', 'automation', 'tool'
+        ],
+        'max_results': 50,
+        'max_posts': 15
+    }
+
+    huggingface_config = {
+        'enabled': True,
+        'max_papers': 15
+    }
+
     # Initialize sources
     hn_source = HackerNewsSource(hn_config)
     github_source = GitHubSource(github_config)
     ph_source = ProductHuntSource(producthunt_config)
     rss_source = RSSSource(rss_config)
+    arxiv_source = ArxivSource(arxiv_config)
+    hf_source = HuggingFacePapersSource(huggingface_config)
 
     ideas_data = {}
 
@@ -166,16 +222,49 @@ def fetch_ai_ideas():
     except Exception as e:
         logger.error(f"Failed to fetch from RSS feeds: {e}")
 
+    # Fetch from arXiv
+    try:
+        logger.info("Fetching AI papers from arXiv...")
+        arxiv_items = arxiv_source.fetch()
+
+        if arxiv_items:
+            for item in arxiv_items:
+                item['category'] = 'arXiv AI论文'
+
+            ideas_data['arXiv AI论文'] = arxiv_items
+            logger.info(f"Found {len(arxiv_items)} AI papers from arXiv")
+
+    except Exception as e:
+        logger.error(f"Failed to fetch from arXiv: {e}")
+
+    # Fetch from Hugging Face Daily Papers
+    try:
+        logger.info("Fetching Hugging Face Daily Papers...")
+        hf_items = hf_source.fetch()
+
+        if hf_items:
+            for item in hf_items:
+                item['category'] = 'Hugging Face热门论文'
+
+            ideas_data['Hugging Face热门论文'] = hf_items
+            logger.info(f"Found {len(hf_items)} Hugging Face papers")
+
+    except Exception as e:
+        logger.error(f"Failed to fetch from Hugging Face papers: {e}")
+
     # Generate ideas report
     total_ideas = sum(len(items) for items in ideas_data.values())
     if total_ideas == 0:
         logger.warning("No AI ideas collected")
         return False
 
+    ideas_data = deduplicate_ideas(ideas_data, logger)
+    total_ideas = sum(len(items) for items in ideas_data.values())
+
     logger.info(f"Total AI ideas collected: {total_ideas}")
 
     # Translate
-    translations = mock_translate_for_testing(ideas_data)
+    translations = translate_batch_with_claude(ideas_data)
 
     # Generate report
     report_config = {
@@ -203,13 +292,16 @@ def fetch_ai_ideas():
     logger.info(f"AI ideas report generated: {filepath}")
 
     # Git commit
-    git_handler = GitHandler(config.get('github', {}))
-    success = git_handler.full_commit_workflow(filepath)
-
-    if success:
-        logger.info("AI ideas report successfully pushed to GitHub")
+    if dry_run:
+        logger.info("Dry run - skipping Git commit")
     else:
-        logger.warning("Git push failed, but report generated locally")
+        git_handler = GitHandler(config.get('github', {}))
+        success = git_handler.full_commit_workflow(filepath)
+
+        if success:
+            logger.info("AI ideas report successfully pushed to GitHub")
+        else:
+            logger.warning("Git push failed, but report generated locally")
 
     logger.info("=" * 50)
     logger.info("AI创意点子报告 - 完成")
@@ -331,6 +423,33 @@ def build_ideas_report(data, date_str, translations):
             lines.append(f"   - 来源: {source}")
             lines.append("")
 
+    # Research papers
+    for section_name in ['arXiv AI论文', 'Hugging Face热门论文']:
+        if section_name in data and data[section_name]:
+            lines.append(f"## 📄 {section_name}")
+            lines.append("")
+
+            for i, item in enumerate(data[section_name], 1):
+                title_en = item.get('title', 'Untitled')
+                title_cn = translations.get(title_en, title_en)
+                link = item.get('link', '')
+                description_en = item.get('description', '')
+                description_cn = translations.get(description_en, description_en)
+                author = item.get('author', 'Unknown')
+                score = item.get('score', 0)
+                comments = item.get('comments', 0)
+
+                lines.append(f"{i}. **{title_cn}**")
+                if title_cn != title_en:
+                    lines.append(f"   - 原文: {title_en}")
+                if description_cn:
+                    lines.append(f"   - 摘要: {description_cn[:240]}")
+                lines.append(f"   - 链接: {link}")
+                lines.append(f"   - 作者/来源: {author}")
+                if score or comments:
+                    lines.append(f"   - 热度: {score} | 评论: {comments}")
+                lines.append("")
+
     # Summary - 简化
     lines.append("## 🎯 今日创意总结")
     lines.append("")
@@ -354,4 +473,14 @@ def build_ideas_report(data, date_str, translations):
 
 
 if __name__ == "__main__":
-    fetch_ai_ideas()
+    parser = argparse.ArgumentParser(
+        description='Generate AI creative ideas daily report'
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Generate report without Git commit'
+    )
+    args = parser.parse_args()
+
+    fetch_ai_ideas(dry_run=args.dry_run)

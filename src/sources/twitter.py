@@ -1,28 +1,35 @@
 """
-Twitter/X data source implementation (optional)
-Uses RapidAPI for Twitter data
+Twitter/X data source implementation (optional).
+Uses the official X API when X_BEARER_TOKEN is configured, with RapidAPI as
+legacy fallback.
 """
 import requests
 import logging
+import os
 from typing import List, Dict, Any
 from datetime import datetime
+from dateutil import parser as date_parser
 from .base import BaseSource
 
 
 class TwitterSource(BaseSource):
     """
-    Fetch AI-related tweets using RapidAPI
-    Optional source - gracefully disabled if API key not configured
+    Fetch AI-related posts using X API or legacy RapidAPI.
+    Optional source - gracefully disabled if no API key is configured.
     """
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.api_key = config.get('rapidapi_key')
+        self.bearer_token = config.get('bearer_token') or os.environ.get('X_BEARER_TOKEN')
+        self.api_key = config.get('rapidapi_key') or os.environ.get('RAPIDAPI_KEY')
         self.enabled = config.get('enabled', False)
+        self.search_terms = config.get('search_terms', [
+            'AI', 'machine learning', 'GPT', 'LLM', 'artificial intelligence'
+        ])
 
-        # RapidAPI configuration
         self.api_host = "twitter-api45.p.rapidapi.com"
         self.base_url = f"https://{self.api_host}"
+        self.x_api_url = "https://api.x.com/2/tweets/search/recent"
 
     def fetch(self) -> List[Dict[str, Any]]:
         """
@@ -31,22 +38,92 @@ class TwitterSource(BaseSource):
         Returns:
             List of tweet dictionaries
         """
-        if not self.enabled or not self.api_key or 'YOUR_' in self.api_key:
+        if not self.enabled:
             self.logger.info("Twitter source is disabled or not configured")
             return []
 
-        self.logger.info("Fetching tweets from Twitter via RapidAPI")
+        if self.bearer_token and 'YOUR_' not in self.bearer_token:
+            self.logger.info("Fetching posts from X API")
+            tweets = self._fetch_x_api_posts()
+        elif self.api_key and 'YOUR_' not in self.api_key:
+            self.logger.info("Fetching tweets from legacy RapidAPI")
+            tweets = self._fetch_rapidapi_tweets()
+        else:
+            self.logger.info("Twitter/X source enabled but no API key is configured")
+            return []
 
-        # Try to fetch trending tweets
-        tweets = self._fetch_tweets()
-
-        # Limit results
         tweets = self._limit_items(tweets)
 
         self.logger.info(f"Found {len(tweets)} tweets")
         return tweets
 
-    def _fetch_tweets(self) -> List[Dict[str, Any]]:
+    def _fetch_x_api_posts(self) -> List[Dict[str, Any]]:
+        """
+        Fetch recent posts from the official X API.
+
+        Returns:
+            List of post dictionaries
+        """
+        headers = {'Authorization': f'Bearer {self.bearer_token}'}
+        posts = []
+
+        for term in self.search_terms[:3]:
+            query = f'({term}) lang:en -is:retweet'
+            params = {
+                'query': query,
+                'max_results': min(max(self.max_items, 10), 100),
+                'tweet.fields': 'created_at,public_metrics,author_id'
+            }
+
+            try:
+                response = self._retry_request(
+                    lambda: requests.get(self.x_api_url, headers=headers, params=params, timeout=15)
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    for tweet_data in data.get('data', []):
+                        posts.append(self._format_x_api_post(tweet_data, term))
+                elif response.status_code == 429:
+                    self.logger.warning("X API rate limit reached")
+                    break
+                elif response.status_code in (401, 403):
+                    self.logger.warning("X API token is invalid or lacks access")
+                    break
+                else:
+                    self.logger.warning(f"X API returned {response.status_code}: {response.text[:200]}")
+
+            except Exception as e:
+                self.logger.warning(f"Failed to fetch X posts for '{term}': {e}")
+
+        posts.sort(key=lambda x: x.get('score', 0), reverse=True)
+        return posts
+
+    def _format_x_api_post(self, tweet_data: Dict, search_term: str) -> Dict[str, Any]:
+        text = tweet_data.get('text', '')
+        metrics = tweet_data.get('public_metrics') or {}
+        tweet_id = tweet_data.get('id', '')
+        created_at = tweet_data.get('created_at')
+
+        try:
+            timestamp = date_parser.parse(created_at).replace(tzinfo=None) if created_at else datetime.now()
+        except Exception:
+            timestamp = datetime.now()
+
+        return {
+            'id': tweet_id,
+            'title': text[:120],
+            'text': text,
+            'link': f"https://x.com/i/web/status/{tweet_id}" if tweet_id else 'https://x.com',
+            'score': metrics.get('like_count', 0) + metrics.get('retweet_count', 0),
+            'retweets': metrics.get('retweet_count', 0),
+            'author': tweet_data.get('author_id', 'unknown'),
+            'timestamp': timestamp,
+            'source': 'X',
+            'search_term': search_term
+        }
+
+    def _fetch_rapidapi_tweets(self) -> List[Dict[str, Any]]:
         """
         Fetch tweets using RapidAPI
 
@@ -58,12 +135,9 @@ class TwitterSource(BaseSource):
             'X-RapidAPI-Host': self.api_host
         }
 
-        # Search for AI-related tweets
-        search_terms = ['AI', 'machine learning', 'GPT', 'LLM', 'artificial intelligence']
-
         tweets = []
 
-        for term in search_terms[:3]:  # Limit searches to avoid quota exhaustion
+        for term in self.search_terms[:3]:  # Limit searches to avoid quota exhaustion
             try:
                 url = f"{self.base_url}/search.php"
                 params = {'query': term}

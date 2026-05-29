@@ -100,6 +100,16 @@ class GitHandler:
                 check=True
             )
 
+            # Skip commit cleanly when the generated report is identical.
+            diff_result = subprocess.run(
+                ['git', 'diff', '--cached', '--quiet', '--', report_path],
+                cwd=self.work_dir
+            )
+
+            if diff_result.returncode == 0:
+                self.logger.info(f"No changes detected for {filename}; skipping commit")
+                return True
+
             # Git commit
             commit_msg = self.config.get(
                 'commit_message',
@@ -107,11 +117,25 @@ class GitHandler:
             ).replace('{date}', date_str)
 
             self.logger.info(f"Committing with message: {commit_msg}")
-            subprocess.run(
+            commit_result = subprocess.run(
                 ['git', 'commit', '-m', commit_msg],
                 cwd=self.work_dir,
-                check=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True
             )
+
+            if commit_result.returncode != 0:
+                combined_output = f"{commit_result.stdout}\n{commit_result.stderr}"
+                if 'nothing to commit' in combined_output.lower():
+                    self.logger.info("Nothing to commit; treating as successful")
+                    return True
+                raise subprocess.CalledProcessError(
+                    commit_result.returncode,
+                    commit_result.args,
+                    output=commit_result.stdout,
+                    stderr=commit_result.stderr
+                )
 
             return True
 
@@ -181,6 +205,16 @@ class GitHandler:
         # Commit the report
         if not self.commit_report(report_path):
             return False
+
+        status_result = subprocess.run(
+            ['git', 'status', '--porcelain', '--', report_path],
+            cwd=self.work_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+        if status_result.returncode == 0 and not status_result.stdout.strip():
+            self.logger.info("No local report changes pending after commit step")
 
         # Push to remote
         return self.push_to_remote()

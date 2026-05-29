@@ -44,16 +44,66 @@ sources:
       - GPT
     max_repos: 15
 
+  rss:
+    enabled: true
+    max_articles: 40
+    feeds:
+      - https://openai.com/blog/rss.xml
+      - https://deepmind.google/research/rss.xml
+      - https://www.anthropic.com/rss
+      - https://blog.google/technology/ai/rss
+      - https://distill.pub/rss.xml
+      - https://ai.googleblog.com/atom.xml
+      - https://www.importai.com/rss
+      - https://lastweekin.ai/rss
+      - https://artificialintelligence-news.com/feed
+      - https://www.technologyreview.com/feed/
+      - https://www.wired.com/feed/rss
+
+  arxiv:
+    enabled: true
+    categories:
+      - cs.AI
+      - cs.CL
+      - cs.LG
+      - cs.CV
+      - stat.ML
+    max_results: 50
+    max_posts: 20
+    timeout: 12
+    keywords:
+      - language model
+      - LLM
+      - agent
+      - GPT
+      - transformer
+      - machine learning
+      - deep learning
+      - multimodal
+      - retrieval
+      - computer vision
+
+  huggingface:
+    enabled: true
+    max_papers: 20
+
   twitter:
     enabled: false
     # Nitter instances are frequently blocked by Twitter
     # Alternative: Use other free sources (HackerNews, GitHub, Reddit)
-    # Or consider paid Twitter API ($100/month for Basic tier)
+    # Or configure the official X API with X_BEARER_TOKEN / bearer_token
+    bearer_token: YOUR_X_BEARER_TOKEN
+    rapidapi_key: YOUR_RAPIDAPI_KEY
     accounts:
       - OpenAI
       - AnthropicAI
       - GoogleAI
       - DeepMindAI
+    search_terms:
+      - AI
+      - LLM
+      - GPT
+      - machine learning
     max_tweets: 20
 
 github:

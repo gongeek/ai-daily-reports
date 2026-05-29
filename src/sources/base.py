@@ -24,7 +24,15 @@ class BaseSource(ABC):
         self.config = config
         self.enabled = config.get('enabled', True)
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.max_items = config.get('max_posts', 20)
+        self.max_items = (
+            config.get('max_items')
+            or config.get('max_posts')
+            or config.get('max_repos')
+            or config.get('max_products')
+            or config.get('max_articles')
+            or config.get('max_tweets')
+            or 20
+        )
 
     @abstractmethod
     def fetch(self) -> List[Dict[str, Any]]:

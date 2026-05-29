@@ -17,9 +17,12 @@ from sources.github import GitHubSource
 from sources.reddit import RedditSource
 from sources.twitter import TwitterSource
 from sources.nitter import NitterSource
+from sources.rss_feed import RSSSource
+from sources.arxiv import ArxivSource
+from sources.huggingface import HuggingFacePapersSource
 from generator import MarkdownGenerator
 from git_handler import GitHandler
-from translator import mock_translate_for_testing  # Using mock for now
+from translator import translate_batch_with_claude
 
 
 def setup_logging(config: dict) -> logging.Logger:
@@ -106,6 +109,24 @@ def initialize_sources(config: dict) -> dict:
             sources_config['github']
         )
 
+    # RSS feeds
+    if sources_config.get('rss', {}).get('enabled', False):
+        sources['RSS Feeds'] = RSSSource(
+            sources_config['rss']
+        )
+
+    # arXiv papers
+    if sources_config.get('arxiv', {}).get('enabled', False):
+        sources['arXiv'] = ArxivSource(
+            sources_config['arxiv']
+        )
+
+    # Hugging Face Daily Papers
+    if sources_config.get('huggingface', {}).get('enabled', False):
+        sources['Hugging Face Papers'] = HuggingFacePapersSource(
+            sources_config['huggingface']
+        )
+
     # Reddit
     if sources_config.get('reddit', {}).get('enabled', True):
         sources['Reddit'] = RedditSource(
@@ -157,6 +178,47 @@ def fetch_all_data(sources: dict, logger: logging.Logger) -> dict:
     return all_data
 
 
+def deduplicate_data(data: dict, logger: logging.Logger) -> dict:
+    """
+    Remove duplicate items across sources by canonical link, falling back to title.
+
+    Args:
+        data: Dictionary with source names as keys and data lists as values
+        logger: Logger instance
+
+    Returns:
+        Deduplicated data preserving source grouping and item order
+    """
+    seen = set()
+    deduped = {}
+    duplicate_count = 0
+
+    for source_name, items in data.items():
+        unique_items = []
+        for item in items:
+            link = (item.get('link') or item.get('reddit_link') or '').strip().lower()
+            title = (item.get('title') or item.get('full_name') or item.get('name') or '').strip().lower()
+            key = link or title
+
+            if not key:
+                unique_items.append(item)
+                continue
+
+            if key in seen:
+                duplicate_count += 1
+                continue
+
+            seen.add(key)
+            unique_items.append(item)
+
+        deduped[source_name] = unique_items
+
+    if duplicate_count:
+        logger.info(f"Removed {duplicate_count} duplicate items")
+
+    return deduped
+
+
 def main(config_path: str = 'config.yaml', dry_run: bool = False) -> bool:
     """
     Main execution function with bilingual support
@@ -189,6 +251,7 @@ def main(config_path: str = 'config.yaml', dry_run: bool = False) -> bool:
 
         # Fetch data
         all_data = fetch_all_data(sources, logger)
+        all_data = deduplicate_data(all_data, logger)
 
         # Check if any data collected
         total_items = sum(len(items) for items in all_data.values())
@@ -201,7 +264,7 @@ def main(config_path: str = 'config.yaml', dry_run: bool = False) -> bool:
 
         # Translate to Chinese
         logger.info("开始翻译标题和描述到中文...")
-        translations = mock_translate_for_testing(all_data)
+        translations = translate_batch_with_claude(all_data)
         logger.info(f"Translated {len(translations)} text items")
 
         # Generate report with translations
