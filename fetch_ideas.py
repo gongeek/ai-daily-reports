@@ -19,6 +19,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from sources.hackernews import HackerNewsSource
 from sources.github import GitHubSource
+from sources.producthunt import ProductHuntSource
+from sources.rss_feed import RSSSource
 from generator import MarkdownGenerator
 from git_handler import GitHandler
 from translator import mock_translate_for_testing
@@ -47,27 +49,46 @@ def fetch_ai_ideas():
     hn_config = {
         'enabled': True,
         'keywords': [
-            'Show HN', 'built with AI', 'AI app', 'AI tool',
+            'Show HN', 'Ask HN', 'built with AI', 'AI app', 'AI tool',
             'GPT app', 'LLM tool', 'AI startup', 'AI project',
             'AI product', 'new AI', 'AI powered', 'using AI',
-            'AI automation', 'AI agent'
+            'AI automation', 'AI agent', 'side project', 'built a'
         ],
         'max_posts': 30
     }
 
     github_config = {
         'enabled': True,
-        'languages': ['Python', 'JavaScript', 'TypeScript', 'Go'],
+        'languages': ['Python', 'JavaScript', 'TypeScript', 'Go', 'Rust'],
         'keywords': [
             'AI', 'gpt', 'llm', 'chatbot', 'assistant',
-            'agent', 'automation', 'tool', 'app', 'cli'
+            'agent', 'automation', 'tool', 'app', 'cli',
+            'creative', 'innovative', 'novel'
         ],
         'max_repos': 20
+    }
+
+    producthunt_config = {
+        'enabled': True,
+        'max_products': 15
+    }
+
+    rss_config = {
+        'enabled': True,
+        'feeds': [
+            'https://openai.com/blog/rss.xml',
+            'https://www.anthropic.com/rss',
+            'https://ai.googleblog.com/atom.xml',
+            'https://www.technologyreview.com/feed/',
+        ],
+        'max_articles': 20
     }
 
     # Initialize sources
     hn_source = HackerNewsSource(hn_config)
     github_source = GitHubSource(github_config)
+    ph_source = ProductHuntSource(producthunt_config)
+    rss_source = RSSSource(rss_config)
 
     ideas_data = {}
 
@@ -112,6 +133,38 @@ def fetch_ai_ideas():
 
     except Exception as e:
         logger.error(f"Failed to fetch from GitHub: {e}")
+
+    # Fetch from Product Hunt
+    try:
+        logger.info("Fetching AI products from Product Hunt...")
+        ph_items = ph_source.fetch()
+
+        if ph_items:
+            # Mark as Product Hunt products
+            for item in ph_items:
+                item['category'] = 'Product Hunt AI产品'
+
+            ideas_data['Product Hunt新产品'] = ph_items
+            logger.info(f"Found {len(ph_items)} AI products on Product Hunt")
+
+    except Exception as e:
+        logger.error(f"Failed to fetch from Product Hunt: {e}")
+
+    # Fetch from RSS feeds
+    try:
+        logger.info("Fetching AI articles from RSS feeds...")
+        rss_items = rss_source.fetch()
+
+        if rss_items:
+            # Mark as RSS articles
+            for item in rss_items:
+                item['category'] = 'AI Blog文章'
+
+            ideas_data['AI博客文章'] = rss_items
+            logger.info(f"Found {len(rss_items)} AI articles from RSS feeds")
+
+    except Exception as e:
+        logger.error(f"Failed to fetch from RSS feeds: {e}")
 
     # Generate ideas report
     total_ideas = sum(len(items) for items in ideas_data.values())
@@ -236,6 +289,50 @@ def build_ideas_report(data, date_str, translations):
             lines.append(f"   - 💭 创意类型: AI工具/自动化实现")
             lines.append("")
 
+    # Product Hunt products
+    if 'Product Hunt新产品' in data and data['Product Hunt新产品']:
+        lines.append("## 🚀 Product Hunt热门AI产品")
+        lines.append("")
+        lines.append("*最新发布的AI产品和创新应用*")
+        lines.append("")
+
+        for i, item in enumerate(data['Product Hunt新产品'], 1):
+            name = item.get('name', 'Unknown')
+            description_en = item.get('description', '')
+            description_cn = translations.get(description_en, description_en)
+            link = item.get('link', '')
+            upvotes = item.get('upvotes', 0)
+
+            lines.append(f"{i}. **{name}**")
+            lines.append(f"   - 产品描述: {description_cn}")
+            if description_cn != description_en and description_en:
+                lines.append(f"   - 英文描述: {description_en}")
+            lines.append(f"   - 产品链接: [{link}]({link})")
+            lines.append(f"   - 用户投票: {upvotes}票")
+            lines.append(f"   - 💭 创意类型: 新AI产品发布")
+            lines.append("")
+
+    # AI Blog articles
+    if 'AI博客文章' in data and data['AI博客文章']:
+        lines.append("## 📰 AI博客精选文章")
+        lines.append("")
+        lines.append("*来自AI公司和研究机构的技术文章*")
+        lines.append("")
+
+        for i, item in enumerate(data['AI博客文章'], 1):
+            title_en = item.get('title', 'Untitled')
+            title_cn = translations.get(title_en, title_en)
+            link = item.get('link', '')
+            source = item.get('source', 'Unknown')
+
+            lines.append(f"{i}. **{title_cn}**")
+            if title_cn != title_en:
+                lines.append(f"   - 原标题: {title_en}")
+            lines.append(f"   - 文章链接: [{link}]({link})")
+            lines.append(f"   - 来源: {source}")
+            lines.append(f"   - 💭 创意类型: AI技术洞察")
+            lines.append("")
+
     # Summary
     lines.append("## 🎯 创意趋势分析")
     lines.append("")
@@ -247,6 +344,8 @@ def build_ideas_report(data, date_str, translations):
     lines.append("- **应用创新**: 将AI应用于特定领域的创新方案")
     lines.append("- **开源项目**: 基于LLM的开源工具和框架")
     lines.append("- **创意实现**: 独特的AI应用场景和解决方案")
+    lines.append("- **新产品发布**: Product Hunt上的AI创新产品")
+    lines.append("- **技术洞察**: AI公司和研究机构的最新动态")
     lines.append("")
 
     lines.append("### 💡 启发价值")
@@ -257,6 +356,7 @@ def build_ideas_report(data, date_str, translations):
     lines.append("- 技术实现方案")
     lines.append("- 商业应用场景")
     lines.append("- 开源项目灵感")
+    lines.append("- 市场趋势洞察")
     lines.append("")
 
     lines.append("---")
