@@ -281,3 +281,87 @@ TypeError: __init__() got an unexpected keyword argument 'capture_output'
 2026-05-29 14:14:05,617 - AIReportGenerator - INFO - AI日报生成器 - 完成
 2026-05-29 14:14:05,617 - AIReportGenerator - INFO - AI Daily Report Generator - Completed
 2026-05-29 14:14:05,617 - AIReportGenerator - INFO - ==================================================
+2026-05-29 14:32:00,365 - AIReportGenerator - INFO - ==================================================
+2026-05-29 14:32:00,367 - AIReportGenerator - INFO - AI日报生成器 - 启动
+2026-05-29 14:32:00,367 - AIReportGenerator - INFO - AI Daily Report Generator - Starting
+2026-05-29 14:32:00,367 - AIReportGenerator - INFO - ==================================================
+2026-05-29 14:32:00,367 - RedditSource - INFO - Reddit JSON API initialized for subreddits: ['LocalLLaMA', 'MachineLearning', 'artificial', 'ArtificialIntelligence', 'deeplearning', 'LLMDevs', 'OpenAI']
+2026-05-29 14:32:00,367 - AIReportGenerator - INFO - Fetching data from 3 sources
+2026-05-29 14:32:00,368 - HackerNewsSource - INFO - Fetching top stories from Hacker News
+2026-05-29 14:32:00,369 - GitHubSource - INFO - Fetching trending repositories from GitHub
+2026-05-29 14:32:00,370 - RedditSource - INFO - Fetching posts from Reddit: ['LocalLLaMA', 'MachineLearning', 'artificial', 'ArtificialIntelligence', 'deeplearning', 'LLMDevs', 'OpenAI']
+2026-05-29 14:32:00,402 - RedditSource - ERROR - Failed to fetch r/LocalLLaMA: HTTP 403 - Failed to fetch r/LocalLLaMA
+2026-05-29 14:32:00,430 - RedditSource - ERROR - Failed to fetch r/MachineLearning: HTTP 403 - Failed to fetch r/MachineLearning
+2026-05-29 14:32:00,456 - RedditSource - ERROR - Failed to fetch r/artificial: HTTP 403 - Failed to fetch r/artificial
+2026-05-29 14:32:00,492 - RedditSource - ERROR - Failed to fetch r/ArtificialIntelligence: HTTP 403 - Failed to fetch r/ArtificialIntelligence
+2026-05-29 14:32:00,515 - RedditSource - ERROR - Failed to fetch r/deeplearning: HTTP 403 - Failed to fetch r/deeplearning
+2026-05-29 14:32:00,536 - RedditSource - ERROR - Failed to fetch r/LLMDevs: HTTP 403 - Failed to fetch r/LLMDevs
+2026-05-29 14:32:00,559 - RedditSource - ERROR - Failed to fetch r/OpenAI: HTTP 403 - Failed to fetch r/OpenAI
+2026-05-29 14:32:00,559 - RedditSource - INFO - Total Reddit posts: 0
+2026-05-29 14:32:00,560 - AIReportGenerator - INFO - Fetched 0 items from Reddit
+2026-05-29 14:32:02,189 - GitHubSource - INFO - Found 4 trending AI repositories
+2026-05-29 14:32:02,190 - AIReportGenerator - INFO - Fetched 4 items from GitHub Trending
+2026-05-29 14:32:14,389 - HackerNewsSource - INFO - Found 19 AI-related stories
+2026-05-29 14:32:14,390 - AIReportGenerator - INFO - Fetched 19 items from Hacker News
+2026-05-29 14:32:14,392 - AIReportGenerator - INFO - Total items collected: 23
+2026-05-29 14:32:14,392 - AIReportGenerator - INFO - 总计收集: 23 条内容
+2026-05-29 14:32:14,392 - AIReportGenerator - INFO - 开始翻译标题和描述到中文...
+2026-05-29 14:32:14,392 - AIReportGenerator - INFO - Translated 27 text items
+2026-05-29 14:32:14,393 - MarkdownGenerator - INFO - Generating report for 2026-05-29
+2026-05-29 14:32:14,395 - MarkdownGenerator - INFO - Report saved to reports/2026-05-29.md
+2026-05-29 14:32:14,395 - AIReportGenerator - INFO - Report generated: reports/2026-05-29.md
+2026-05-29 14:32:14,396 - AIReportGenerator - INFO - 报告已生成: reports/2026-05-29.md
+2026-05-29 14:32:14,396 - GitHandler - INFO - Starting Git commit workflow
+2026-05-29 14:32:14,420 - GitHandler - INFO - Git repository already initialized
+2026-05-29 14:32:14,421 - GitHandler - INFO - Adding 2026-05-29.md to Git
+2026-05-29 14:32:14,428 - GitHandler - INFO - Committing with message: Add AI daily report for 2026-05-29
+2026-05-29 14:32:14,470 - GitHandler - INFO - Pushing to remote: main
+2026-05-29 14:32:15,989 - GitHandler - INFO - Successfully pushed to GitHub
+2026-05-29 14:32:15,990 - AIReportGenerator - INFO - Report successfully committed and pushed to GitHub
+2026-05-29 14:32:15,990 - AIReportGenerator - INFO - 报告已成功提交到GitHub
+2026-05-29 14:32:15,990 - AIReportGenerator - INFO - ==================================================
+2026-05-29 14:32:15,990 - AIReportGenerator - INFO - AI日报生成器 - 完成
+2026-05-29 14:32:15,990 - AIReportGenerator - INFO - AI Daily Report Generator - Completed
+2026-05-29 14:32:15,990 - AIReportGenerator - INFO - ==================================================
+2026-05-29 14:32:32,928 - AIReportGenerator - INFO - ==================================================
+2026-05-29 14:32:32,928 - AIReportGenerator - INFO - AI日报生成器 - 启动
+2026-05-29 14:32:32,928 - AIReportGenerator - INFO - AI Daily Report Generator - Starting
+2026-05-29 14:32:32,928 - AIReportGenerator - INFO - ==================================================
+2026-05-29 14:32:32,929 - RedditSource - INFO - Reddit JSON API initialized for subreddits: ['LocalLLaMA', 'MachineLearning', 'artificial', 'ArtificialIntelligence', 'deeplearning', 'LLMDevs', 'OpenAI']
+2026-05-29 14:32:32,929 - AIReportGenerator - INFO - Fetching data from 3 sources
+2026-05-29 14:32:32,929 - HackerNewsSource - INFO - Fetching top stories from Hacker News
+2026-05-29 14:32:32,950 - GitHubSource - INFO - Fetching trending repositories from GitHub
+2026-05-29 14:32:32,959 - RedditSource - INFO - Fetching posts from Reddit: ['LocalLLaMA', 'MachineLearning', 'artificial', 'ArtificialIntelligence', 'deeplearning', 'LLMDevs', 'OpenAI']
+2026-05-29 14:32:32,980 - RedditSource - ERROR - Failed to fetch r/LocalLLaMA: HTTP 403 - Failed to fetch r/LocalLLaMA
+2026-05-29 14:32:33,035 - RedditSource - ERROR - Failed to fetch r/MachineLearning: HTTP 403 - Failed to fetch r/MachineLearning
+2026-05-29 14:32:33,056 - RedditSource - ERROR - Failed to fetch r/artificial: HTTP 403 - Failed to fetch r/artificial
+2026-05-29 14:32:33,123 - RedditSource - ERROR - Failed to fetch r/ArtificialIntelligence: HTTP 403 - Failed to fetch r/ArtificialIntelligence
+2026-05-29 14:32:33,168 - RedditSource - ERROR - Failed to fetch r/deeplearning: HTTP 403 - Failed to fetch r/deeplearning
+2026-05-29 14:32:33,189 - RedditSource - ERROR - Failed to fetch r/LLMDevs: HTTP 403 - Failed to fetch r/LLMDevs
+2026-05-29 14:32:33,224 - RedditSource - ERROR - Failed to fetch r/OpenAI: HTTP 403 - Failed to fetch r/OpenAI
+2026-05-29 14:32:33,224 - RedditSource - INFO - Total Reddit posts: 0
+2026-05-29 14:32:33,227 - AIReportGenerator - INFO - Fetched 0 items from Reddit
+2026-05-29 14:32:33,293 - GitHubSource - INFO - Found 4 trending AI repositories
+2026-05-29 14:32:33,294 - AIReportGenerator - INFO - Fetched 4 items from GitHub Trending
+2026-05-29 14:32:47,085 - HackerNewsSource - INFO - Found 19 AI-related stories
+2026-05-29 14:32:47,086 - AIReportGenerator - INFO - Fetched 19 items from Hacker News
+2026-05-29 14:32:47,088 - AIReportGenerator - INFO - Total items collected: 23
+2026-05-29 14:32:47,088 - AIReportGenerator - INFO - 总计收集: 23 条内容
+2026-05-29 14:32:47,088 - AIReportGenerator - INFO - 开始翻译标题和描述到中文...
+2026-05-29 14:32:47,088 - AIReportGenerator - INFO - Translated 27 text items
+2026-05-29 14:32:47,088 - MarkdownGenerator - INFO - Generating report for 2026-05-29
+2026-05-29 14:32:47,089 - MarkdownGenerator - INFO - Report saved to reports/2026-05-29.md
+2026-05-29 14:32:47,089 - AIReportGenerator - INFO - Report generated: reports/2026-05-29.md
+2026-05-29 14:32:47,090 - AIReportGenerator - INFO - 报告已生成: reports/2026-05-29.md
+2026-05-29 14:32:47,090 - GitHandler - INFO - Starting Git commit workflow
+2026-05-29 14:32:47,098 - GitHandler - INFO - Git repository already initialized
+2026-05-29 14:32:47,099 - GitHandler - INFO - Adding 2026-05-29.md to Git
+2026-05-29 14:32:47,110 - GitHandler - INFO - Committing with message: Add AI daily report for 2026-05-29
+2026-05-29 14:32:47,130 - GitHandler - INFO - Pushing to remote: main
+2026-05-29 14:32:48,672 - GitHandler - INFO - Successfully pushed to GitHub
+2026-05-29 14:32:48,672 - AIReportGenerator - INFO - Report successfully committed and pushed to GitHub
+2026-05-29 14:32:48,672 - AIReportGenerator - INFO - 报告已成功提交到GitHub
+2026-05-29 14:32:48,672 - AIReportGenerator - INFO - ==================================================
+2026-05-29 14:32:48,672 - AIReportGenerator - INFO - AI日报生成器 - 完成
+2026-05-29 14:32:48,672 - AIReportGenerator - INFO - AI Daily Report Generator - Completed
+2026-05-29 14:32:48,672 - AIReportGenerator - INFO - ==================================================

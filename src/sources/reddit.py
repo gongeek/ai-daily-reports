@@ -1,7 +1,8 @@
 """
-Reddit data source implementation
+Reddit data source implementation using public JSON API
+No OAuth required, directly access Reddit's .json endpoints
 """
-import praw
+import requests
 import logging
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
@@ -10,32 +11,28 @@ from .base import BaseSource
 
 class RedditSource(BaseSource):
     """
-    Fetch AI-related posts from Reddit subreddits
-    Uses PRAW (Python Reddit API Wrapper)
+    Fetch AI-related posts from Reddit subreddits using public JSON API
+    No authentication required - uses Reddit's open .json endpoints
     """
+
+    # Default AI-related subreddits
+    DEFAULT_SUBREDDITS = [
+        'LocalLLaMA',
+        'MachineLearning',
+        'artificial',
+        'ArtificialIntelligence',
+        'deeplearning',
+        'LLMDevs',
+        'OpenAI'
+    ]
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.subreddits = config.get('subreddits', [
-            'MachineLearning', 'artificial',
-            'ArtificialIntelligence', 'deeplearning'
-        ])
-        self.client_id = config.get('client_id')
-        self.client_secret = config.get('client_secret')
-        self.user_agent = config.get('user_agent', 'AI Daily Report Bot 1.0')
+        self.subreddits = config.get('subreddits', self.DEFAULT_SUBREDDITS)
+        self.limit = config.get('limit', 25)
 
-        # Initialize Reddit client
-        self.reddit = None
-        if self.client_id and self.client_secret and 'YOUR_' not in self.client_id:
-            try:
-                self.reddit = praw.Reddit(
-                    client_id=self.client_id,
-                    client_secret=self.client_secret,
-                    user_agent=self.user_agent
-                )
-                self.logger.info("Reddit client initialized successfully")
-            except Exception as e:
-                self.logger.error(f"Failed to initialize Reddit client: {e}")
+        # No need for client_id/client_secret with JSON API
+        self.logger.info(f"Reddit JSON API initialized for subreddits: {self.subreddits}")
 
     def fetch(self) -> List[Dict[str, Any]]:
         """
@@ -46,13 +43,6 @@ class RedditSource(BaseSource):
         """
         if not self.enabled:
             self.logger.info("Reddit source is disabled")
-            return []
-
-        if not self.reddit:
-            self.logger.warning(
-                "Reddit client not initialized. "
-                "Please configure client_id and client_secret in config.yaml"
-            )
             return []
 
         self.logger.info(f"Fetching posts from Reddit: {self.subreddits}")
@@ -76,7 +66,7 @@ class RedditSource(BaseSource):
 
     def _fetch_subreddit_posts(self, subreddit_name: str) -> List[Dict[str, Any]]:
         """
-        Fetch hot posts from a specific subreddit
+        Fetch hot posts from a specific subreddit using JSON API
 
         Args:
             subreddit_name: Name of the subreddit
@@ -84,44 +74,85 @@ class RedditSource(BaseSource):
         Returns:
             List of post dictionaries
         """
-        subreddit = self.reddit.subreddit(subreddit_name)
+        # Reddit's public JSON API endpoint
+        url = f"https://www.reddit.com/r/{subreddit_name}/hot.json?limit={self.limit}"
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/json,text/html,application/xhtml+xml',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive'
+        }
+
+        response = self._retry_request(
+            lambda: requests.get(url, headers=headers, timeout=15)
+        )
+
+        if response.status_code != 200:
+            raise Exception(f"HTTP {response.status_code} - Failed to fetch r/{subreddit_name}")
+
+        data = response.json()
+
+        if 'data' not in data or 'children' not in data['data']:
+            self.logger.warning(f"Unexpected JSON structure for r/{subreddit_name}")
+            return []
+
         posts = []
-
-        # Fetch hot posts
-        for submission in subreddit.hot(limit=50):
-            # Filter for recent posts (within last 24 hours or highly scored)
-            post_time = datetime.fromtimestamp(submission.created_utc)
-            time_diff = datetime.now() - post_time
-
-            # Include posts from last 24 hours or with high score
-            if time_diff <= timedelta(hours=24) or submission.score >= 100:
-                posts.append(self._format_post(submission, subreddit_name))
+        for child in data['data']['children']:
+            if child['kind'] == 't3':  # t3 is a post
+                post_data = child['data']
+                post = self._format_post(post_data, subreddit_name)
+                posts.append(post)
 
         return posts
 
-    def _format_post(self, submission, subreddit_name: str) -> Dict[str, Any]:
+    def _format_post(self, post_data: Dict, subreddit_name: str) -> Dict[str, Any]:
         """
-        Format Reddit submission into standard dictionary
+        Format Reddit post data into standard dictionary
 
         Args:
-            submission: PRAW submission object
+            post_data: Raw post data from Reddit JSON API
             subreddit_name: Subreddit name
 
         Returns:
             Post dictionary
         """
+        # Extract basic info
+        title = post_data.get('title', '')
+        score = post_data.get('score', 0)
+        num_comments = post_data.get('num_comments', 0)
+        author = post_data.get('author', '[deleted]')
+        created_utc = post_data.get('created_utc', 0)
+
+        # Links
+        permalink = post_data.get('permalink', '')
+        reddit_link = f"https://reddit.com{permalink}"
+
+        # External link if it's a link post
+        external_url = post_data.get('url', '') if not post_data.get('is_self', True) else None
+
+        # Use external URL if available, otherwise use Reddit permalink
+        main_link = external_url if external_url else reddit_link
+
+        # Selftext (post body text)
+        selftext = post_data.get('selftext', '')
+
         return {
-            'id': submission.id,
-            'title': submission.title,
-            'link': f"https://reddit.com{submission.permalink}",
-            'url': submission.url if submission.url.startswith('http') else None,
-            'score': submission.score,
-            'comments': submission.num_comments,
-            'author': str(submission.author) if submission.author else '[deleted]',
+            'id': post_data.get('id', ''),
+            'title': title,
+            'link': main_link,
+            'reddit_link': reddit_link,
+            'external_url': external_url,
+            'score': score,
+            'comments': num_comments,
+            'author': author,
             'subreddit': subreddit_name,
-            'timestamp': datetime.fromtimestamp(submission.created_utc),
+            'timestamp': datetime.fromtimestamp(created_utc),
             'source': f'Reddit r/{subreddit_name}',
-            'is_self': submission.is_self
+            'is_self': post_data.get('is_self', True),
+            'selftext': selftext[:500] if selftext else None,  # Limit text length
+            'domain': post_data.get('domain', 'self.' + subreddit_name)
         }
 
 
@@ -133,14 +164,11 @@ if __name__ == "__main__":
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    # Test with your Reddit API credentials
     config = {
         'enabled': True,
-        'subreddits': ['MachineLearning', 'artificial'],
-        'client_id': 'YOUR_CLIENT_ID',  # Replace with actual ID
-        'client_secret': 'YOUR_CLIENT_SECRET',  # Replace with actual secret
-        'user_agent': 'AI Daily Report Bot 1.0',
-        'max_posts': 10
+        'subreddits': ['LocalLLaMA', 'MachineLearning'],
+        'limit': 10,
+        'max_posts': 20
     }
 
     source = RedditSource(config)
@@ -150,5 +178,7 @@ if __name__ == "__main__":
     for i, post in enumerate(posts, 1):
         print(f"{i}. [{post['subreddit']}] {post['title'][:60]}...")
         print(f"   Score: {post['score']}, Comments: {post['comments']}")
+        print(f"   Author: {post['author']}")
         print(f"   Link: {post['link']}")
+        print(f"   Reddit: {post['reddit_link']}")
         print()

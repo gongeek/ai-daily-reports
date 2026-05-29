@@ -17,17 +17,16 @@ sources:
     max_posts: 20
 
   reddit:
-    enabled: true
+    enabled: false
+    # Reddit blocks server-side API requests
+    # JSON API returns "Blocked" for non-browser requests
+    # Alternative: Use other free sources (HackerNews + GitHub + RSS feeds)
     subreddits:
+      - LocalLLaMA
       - MachineLearning
       - artificial
-      - ArtificialIntelligence
-      - deeplearning
-    # Get these from https://www.reddit.com/prefs/apps
-    client_id: YOUR_REDDIT_CLIENT_ID
-    client_secret: YOUR_REDDIT_CLIENT_SECRET
-    user_agent: "AI Daily Report Bot 1.0"
-    max_posts: 15
+    limit: 25
+    max_posts: 50
 
   github:
     enabled: true
