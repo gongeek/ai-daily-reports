@@ -246,8 +246,6 @@ def build_ideas_report(data, date_str, translations):
     if 'Hacker News创意项目' in data and data['Hacker News创意项目']:
         lines.append("## 💡 Hacker News创意项目")
         lines.append("")
-        lines.append("*来自技术社区的AI创新应用展示*")
-        lines.append("")
 
         for i, item in enumerate(data['Hacker News创意项目'], 1):
             title_en = item.get('title', 'Untitled')
@@ -256,19 +254,18 @@ def build_ideas_report(data, date_str, translations):
             score = item.get('score', 0)
             comments = item.get('comments', 0)
 
+            # 主标题（中文翻译）
             lines.append(f"{i}. **{title_cn}**")
-            if title_cn != title_en:
-                lines.append(f"   - 原标题: {title_en}")
-            lines.append(f"   - 链接: [{link}]({link})")
-            lines.append(f"   - 关注度: {score}点 | 讨论: {comments}条")
-            lines.append(f"   - 💭 创意类型: 新AI应用/工具展示")
+            # 原文标题和链接
+            lines.append(f"   - 原文: {title_en}")
+            lines.append(f"   - 链接: {link}")
+            # 简要统计
+            lines.append(f"   - {score}点 | {comments}评论")
             lines.append("")
 
     # GitHub AI tools
     if 'GitHub AI工具' in data and data['GitHub AI工具']:
         lines.append("## 🔧 GitHub热门AI工具")
-        lines.append("")
-        lines.append("*开源AI工具和自动化项目*")
         lines.append("")
 
         for i, item in enumerate(data['GitHub AI工具'], 1):
@@ -280,20 +277,20 @@ def build_ideas_report(data, date_str, translations):
             stars = item.get('stars', 0)
             stars_today = item.get('stars_today', 0)
 
-            lines.append(f"{i}. **[{full_name}]({link})**")
-            lines.append(f"   - 功能: {description_cn}")
+            # 项目名
+            lines.append(f"{i}. **{full_name}**")
+            # 中文描述
+            lines.append(f"   - {description_cn}")
+            # 原描述和链接
             if description_cn != description_en:
                 lines.append(f"   - 原描述: {description_en}")
-            lines.append(f"   - 技术栈: {language}")
-            lines.append(f"   - Stars: {stars} | 今日+{stars_today}")
-            lines.append(f"   - 💭 创意类型: AI工具/自动化实现")
+            lines.append(f"   - 链接: {link}")
+            lines.append(f"   - {language} | {stars} stars | 今日+{stars_today}")
             lines.append("")
 
     # Product Hunt products
     if 'Product Hunt新产品' in data and data['Product Hunt新产品']:
         lines.append("## 🚀 Product Hunt热门AI产品")
-        lines.append("")
-        lines.append("*最新发布的AI产品和创新应用*")
         lines.append("")
 
         for i, item in enumerate(data['Product Hunt新产品'], 1):
@@ -303,20 +300,21 @@ def build_ideas_report(data, date_str, translations):
             link = item.get('link', '')
             upvotes = item.get('upvotes', 0)
 
+            # 产品名
             lines.append(f"{i}. **{name}**")
-            lines.append(f"   - 产品描述: {description_cn}")
+            # 中文描述
+            if description_cn:
+                lines.append(f"   - {description_cn}")
+            # 原描述和链接
             if description_cn != description_en and description_en:
-                lines.append(f"   - 英文描述: {description_en}")
-            lines.append(f"   - 产品链接: [{link}]({link})")
-            lines.append(f"   - 用户投票: {upvotes}票")
-            lines.append(f"   - 💭 创意类型: 新AI产品发布")
+                lines.append(f"   - 原描述: {description_en}")
+            lines.append(f"   - 链接: {link}")
+            lines.append(f"   - {upvotes}票")
             lines.append("")
 
     # AI Blog articles
     if 'AI博客文章' in data and data['AI博客文章']:
         lines.append("## 📰 AI博客精选文章")
-        lines.append("")
-        lines.append("*来自AI公司和研究机构的技术文章*")
         lines.append("")
 
         for i, item in enumerate(data['AI博客文章'], 1):
@@ -325,45 +323,31 @@ def build_ideas_report(data, date_str, translations):
             link = item.get('link', '')
             source = item.get('source', 'Unknown')
 
+            # 中文标题
             lines.append(f"{i}. **{title_cn}**")
-            if title_cn != title_en:
-                lines.append(f"   - 原标题: {title_en}")
-            lines.append(f"   - 文章链接: [{link}]({link})")
+            # 原标题和链接
+            lines.append(f"   - 原标题: {title_en}")
+            lines.append(f"   - 链接: {link}")
             lines.append(f"   - 来源: {source}")
-            lines.append(f"   - 💭 创意类型: AI技术洞察")
             lines.append("")
 
-    # Summary
-    lines.append("## 🎯 创意趋势分析")
+    # Summary - 简化
+    lines.append("## 🎯 今日创意总结")
     lines.append("")
-    lines.append("### 热门创意方向")
+    total = sum(len(items) for items in data.values())
+    lines.append(f"收集了{total}个AI创意，涵盖:")
     lines.append("")
-    lines.append("根据今日收集的AI创意，可以看到以下趋势：")
-    lines.append("")
-    lines.append("- **AI工具开发**: 各种AI辅助工具和自动化脚本")
-    lines.append("- **应用创新**: 将AI应用于特定领域的创新方案")
-    lines.append("- **开源项目**: 基于LLM的开源工具和框架")
-    lines.append("- **创意实现**: 独特的AI应用场景和解决方案")
-    lines.append("- **新产品发布**: Product Hunt上的AI创新产品")
-    lines.append("- **技术洞察**: AI公司和研究机构的最新动态")
-    lines.append("")
-
-    lines.append("### 💡 启发价值")
-    lines.append("")
-    lines.append("这些创意展示了AI技术在不同领域的应用可能性，可以激发：")
-    lines.append("")
+    lines.append("- 新AI应用和工具")
     lines.append("- 产品创新思路")
     lines.append("- 技术实现方案")
-    lines.append("- 商业应用场景")
-    lines.append("- 开源项目灵感")
-    lines.append("- 市场趋势洞察")
+    lines.append("- AI技术洞察")
     lines.append("")
 
     lines.append("---")
     lines.append("")
-    lines.append("*本报告专注于AI创意应用，由AI创意点子日报系统生成*")
+    lines.append("*AI创意点子日报 - 每日收集AI创新应用和创意点子*")
     lines.append("")
-    lines.append(f"[查看所有报告](../ideas-reports/)")
+    lines.append(f"[查看历史报告](../ideas-reports/)")
     lines.append("")
 
     return '\n'.join(lines)
